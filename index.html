@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Multi-Browser Control Panel</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: sans-serif;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      .main-title {
+        margin: 8px 0 0 16px;
+        padding-bottom: 8px;
+        display: flex;
+        align-items: center;
+      }
+      .settings-btn {
+        margin-left: 16px;
+        font-size: 1em;
+        padding: 4px 14px;
+        border-radius: 6px;
+        border: 1px solid #bbb;
+        background: #e0e0e0;
+        cursor: pointer;
+      }
+      .input-bar {
+        width: 100vw;
+        height: 60px;
+        box-sizing: border-box;
+        border-top: 1px solid #ccc;
+        background: #f8f8f8;
+        display: flex;
+        align-items: center;
+        padding: 0 24px;
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        z-index: 10;
+      }
+      .input-bar input {
+        width: 100%;
+        height: 40px;
+        font-size: 1.2em;
+        padding: 0 12px;
+        border-radius: 6px;
+        border: 1px solid #bbb;
+        outline: none;
+      }
+      .input-bar button {
+        margin-left: 12px;
+        height: 40px;
+        font-size: 1.1em;
+        padding: 0 18px;
+        border-radius: 6px;
+        border: 1px solid #bbb;
+        background: #e0e0e0;
+        cursor: pointer;
+        align-self: flex-end;
+      }
+      .input-bar textarea {
+        width: 100%;
+        min-height: 40px;
+        max-height: 200px;
+        box-sizing: border-box;
+        font-size: 1.2em;
+        padding: 8px 12px;
+        border-radius: 6px;
+        border: 1px solid #bbb;
+        outline: none;
+        resize: none;
+        font-family: sans-serif;
+        line-height: 1.4;
+      }
+      .site-row {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: row;
+        width: 100vw;
+        height: calc(100vh - 48px);
+      }
+      /* Modal styles */
+      .modal-bg {
+        display: none;
+        position: fixed;
+        left: 0;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.3);
+        z-index: 100;
+        align-items: center;
+        justify-content: center;
+      }
+      .modal-bg.active {
+        display: flex;
+      }
+      .modal {
+        background: #fff;
+        border-radius: 10px;
+        padding: 32px 32px 24px 32px;
+        min-width: 350px;
+        box-shadow: 0 4px 32px #0002;
+      }
+      .modal h2 {
+        margin-top: 0;
+      }
+      .modal label {
+        display: block;
+        margin: 16px 0 6px 0;
+      }
+      .modal input[type="text"] {
+        width: 100%;
+        padding: 8px;
+        font-size: 1em;
+        border-radius: 5px;
+        border: 1px solid #bbb;
+      }
+      .modal .modal-actions {
+        margin-top: 24px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+      }
+      .modal button {
+        font-size: 1em;
+        padding: 6px 18px;
+        border-radius: 6px;
+        border: 1px solid #bbb;
+        background: #e0e0e0;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="main-title">
+      <button class="settings-btn" id="settingsBtn">Settings</button>
+    </div>
+    <div class="site-row"></div>
+    <form class="input-bar" id="askForm" autocomplete="off">
+      <textarea
+        id="askInput"
+        placeholder="Type your message and send to all..."
+        rows="1"
+      ></textarea>
+      <button type="submit">Send</button>
+    </form>
+    <!-- Modal for editing URLs -->
+    <div class="modal-bg" id="modalBg">
+      <form class="modal" id="settingsForm" autocomplete="off">
+        <h2>Edit Site URLs</h2>
+        <label for="url1">Site 1:</label>
+        <input type="text" id="url1" required />
+        <label for="url2">Site 2:</label>
+        <input type="text" id="url2" required />
+        <label for="url3">Site 3 (optional):</label>
+        <input type="text" id="url3" />
+        <div class="modal-actions">
+          <button type="button" id="cancelBtn">Cancel</button>
+          <button type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+    <script>
+      // Ask input logic
+      const form = document.getElementById("askForm");
+      const textarea = document.getElementById("askInput");
+
+      function adjustTextareaHeight() {
+        textarea.style.height = "auto";
+        textarea.style.height = `${textarea.scrollHeight}px`;
+      }
+
+      textarea.addEventListener("input", adjustTextareaHeight);
+
+      // Toggle input bar shortcut
+      function toggleInputBar() {
+        form.style.display = form.style.display === "none" ? "flex" : "none";
+        if (form.style.display === "flex") textarea.focus();
+      }
+      window.addEventListener("keydown", (e) => {
+        // Cmd+Opt+A (Mac) or Ctrl+Alt+A (Win/Linux)
+        if (
+          (e.metaKey && e.altKey && e.key.toLowerCase() === "a") ||
+          (e.ctrlKey && e.altKey && e.key.toLowerCase() === "a")
+        ) {
+          e.preventDefault();
+          toggleInputBar();
+        }
+      });
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const message = textarea.value.trim();
+        if (message) {
+          const script = `
+(function() {
+  const url = window.location.hostname;
+
+  // ChatGPT
+  if (url.includes("chatgpt.com")) {
+    const editor = document.querySelector('.ProseMirror');
+    if (editor) {
+      editor.innerText = ${JSON.stringify(message)};
+      editor.dispatchEvent(new Event('input', { bubbles: true }));
+       setTimeout(function() {
+      var sendBtn = document.querySelector('#composer-submit-button') ||
+                    document.querySelector('[data-testid="send-button"]') ||
+                    document.querySelector('[aria-label="Send prompt"]');
+      if (sendBtn) sendBtn.click();
+    }, 200);
+    }
+  }
+
+  // Gemini
+  else if (url.includes("gemini.google.com")) {
+    const editor = document.querySelector('div.ql-editor[contenteditable="true"][aria-label]');
+    if (editor) {
+      editor.focus();
+      editor.innerText = ${JSON.stringify(message)};
+      editor.dispatchEvent(new Event('input', { bubbles: true }));
+      setTimeout(() => {
+        // Simulate pressing Enter key
+        const event = new KeyboardEvent('keydown', {
+          key: 'Enter',
+          code: 'Enter',
+          keyCode: 13,
+          which: 13,
+          bubbles: true,
+          cancelable: true
+        });
+        editor.dispatchEvent(event);
+      }, 200);
+    } else {
+      alert("Gemini input editor not found!");
+    }
+  }
+
+  // Claude
+  else if (url.includes("claude.ai")) {
+    // Try textarea first
+    let input = document.querySelector('textarea');
+    if (!input) {
+      // Try contenteditable div
+      input = document.querySelector('div[contenteditable="true"]');
+      if (input) {
+        input.innerText = ${JSON.stringify(message)};
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    } else {
+      input.value = ${JSON.stringify(message)};
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+   setTimeout(() => {
+      const sendBtn = document.querySelector('button[aria-label="Send message"]:not([disabled])');
+      if (sendBtn) {
+        sendBtn.click();
+      } 
+    }, 200);
+  }
+})();
+`;
+          window.electronAPI.sendMessageToAll(script);
+          textarea.value = "";
+          adjustTextareaHeight();
+        }
+      });
+
+      textarea.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          form.dispatchEvent(
+            new Event("submit", { cancelable: true, bubbles: true })
+          );
+        }
+      });
+
+      // Settings modal logic
+
+      const modalBg = document.getElementById("modalBg");
+      const settingsForm = document.getElementById("settingsForm");
+      const url1 = document.getElementById("url1");
+      const url2 = document.getElementById("url2");
+      const url3 = document.getElementById("url3");
+      const cancelBtn = document.getElementById("cancelBtn");
+
+      // Listen for shortcut event from main process
+      window.electronAPI.onOpenSiteConfig(async () => {
+        const urls = await window.electronAPI.getSiteUrls();
+        url1.value = urls[0] || "";
+        url2.value = urls[1] || "";
+        url3.value = urls[2] || "";
+        modalBg.classList.add("active");
+        window.electronAPI.hideBrowserViews();
+      });
+      cancelBtn.addEventListener("click", () => {
+        modalBg.classList.remove("active");
+        window.electronAPI.showBrowserViews();
+      });
+      settingsForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const newUrls = [url1.value.trim(), url2.value.trim()];
+        if (url3.value.trim()) newUrls.push(url3.value.trim());
+        if (newUrls.length >= 2 && newUrls.every((u) => u)) {
+          await window.electronAPI.setSiteUrls(newUrls);
+          modalBg.classList.remove("active");
+          window.electronAPI.showBrowserViews();
+        } else {
+          alert("Please enter at least two valid URLs.");
+        }
+      });
+    </script>
+  </body>
+</html>

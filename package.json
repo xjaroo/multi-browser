@@ -1,0 +1,50 @@
+{
+  "name": "multi-browser",
+  "version": "1.0.0",
+  "description": "Electron app to open and control multiple independent browser windows.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "postinstall": "electron-builder install-app-deps",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux",
+    "build:all": "electron-builder -mwl"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "^29.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "author": {
+    "name": "Minhong",
+    "email": "min@remsmart.com"
+  },
+  "license": "MIT",
+  "homepage": "https://bitbucket.org/remsmart/multi-browser",
+  "build": {
+    "appId": "com.multi.browser",
+    "productName": "MultiBrowser",
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "sites.json"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "maintainer": "minhong@example.com"
+    }
+  }
+}
